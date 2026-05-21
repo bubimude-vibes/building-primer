@@ -7,14 +7,14 @@ const SITE = {
 };
 
 const C = {
-  bg: "#141413",
-  surface: "#1A1A19",
-  surfaceWarm: "#1E1D1A",
-  surfaceHover: "#252420",
-  text: "#E8E4DC",
-  textSecondary: "#A09888",
-  textMuted: "#6B6358",
-  border: "#2A2824",
+  bg: "#111114",
+  surface: "#18181B",
+  surfaceWarm: "#1C1C20",
+  surfaceHover: "#222228",
+  text: "#E4E4E8",
+  textSecondary: "#9898A0",
+  textMuted: "#5C5C66",
+  border: "#2A2A30",
   green: "#2EBD8E",
   blue: "#4BA0E5",
   red: "#D45555",

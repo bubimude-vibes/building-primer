@@ -1,12 +1,12 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body, #root { height: 100%; }
 body {
-  background: #141413;
-  color: #E8E4DC;
+  background: #111114;
+  color: #E4E4E8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-::selection { background: rgba(46,189,142,0.2); color: #E8E4DC; }
+::selection { background: rgba(46,189,142,0.2); color: #E4E4E8; }
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-thumb { background: #2A2824; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #2A2A30; border-radius: 2px; }
 a:hover { opacity: 0.7; }
