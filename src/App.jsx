@@ -1,64 +1,161 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "./supabase";
 
 const SITE = {
-  github: "https://github.com/youruser/primer",
+  github: "https://github.com/bubimude-vibes/primer",
   substack: "https://yoursubstack.substack.com",
 };
 
 const C = {
-  bg: "#FAF9F7",
-  surface: "#FFFFFF",
-  surfaceWarm: "#F8F6F2",
-  text: "#2D2A26",
-  textSecondary: "#5E5850",
-  textMuted: "#A09888",
-  border: "#EBE7E0",
+  bg: "#141413",
+  surface: "#1A1A19",
+  surfaceWarm: "#1E1D1A",
+  surfaceHover: "#252420",
+  text: "#E8E4DC",
+  textSecondary: "#A09888",
+  textMuted: "#6B6358",
+  border: "#2A2824",
   green: "#2EBD8E",
   blue: "#4BA0E5",
+  red: "#D45555",
 };
 
 const gradient = `linear-gradient(135deg, ${C.green}, ${C.blue})`;
 const gradientText = { background: gradient, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" };
 
-// ─── Posts ────────────────────────────────────────────────────
+// ─── Seed Post (shown if Supabase isn't set up yet) ──────────
 
-const POSTS = [
-  {
-    id: 1,
-    slug: "why-im-building-primer",
-    title: "Why I'm Building Primer",
-    date: "May 21, 2026",
-    readTime: "5 min",
-    tags: ["vision", "parenting"],
-    excerpt: "We spend a lot of energy as parents worrying about our kids and their devices. Meanwhile we're glued to our own. The kids have noticed.",
-    body: [
-      { type: "text", content: "We spend a lot of energy as parents worrying about our kids and their devices. Screen time limits, app restrictions, lectures about attention spans. Meanwhile we're glued to our own. The kids have noticed." },
-      { type: "text", content: "There's something off about the whole framing. We treat devices like a threat to be managed when we know they aren't going away. We know our kids will build their lives around them. We know AI is about to make all of this more intense, not less. And our best collective strategy is restriction?" },
-      { type: "text", content: "I don't think the problem is that kids use devices. The problem is that nobody is building the right experience for them." },
-      { type: "text", content: "The apps my kids have access to are designed to retain them. Engagement metrics, notification loops, infinite scroll, streaks that punish you for missing a day. Even the \"educational\" ones are mostly built around the same model — keep the kid on the app as long as possible, make the numbers go up, report usage stats to parents so everyone feels good about screen time that's supposedly productive." },
-      { type: "text", content: "None of that is designed for my kids' benefit. It's designed for a business model. And I think most parents sense this even if they can't articulate it." },
-      { type: "text", content: "So rather than fighting a losing war against devices, I decided to build something worth putting on one." },
-      { type: "heading", content: "The Name" },
-      { type: "text", content: "Primer comes from Neal Stephenson's 1995 novel The Diamond Age. In the book there's a device called the Young Lady's Illustrated Primer — an interactive book powered by AI that adapts to its reader. It guides a young girl's education through story, challenge, and conversation. It doesn't do her thinking for her. It makes her a better thinker. It meets her where she is and grows with her." },
-      { type: "text", content: "Stephenson wrote this thirty years ago as science fiction. The technology to actually build it exists now. Not a perfect version — not yet — but something real, something functional, something that captures the core idea: a personalized AI thinking partner shaped around a specific kid, designed to educate and build curiosity and support them in becoming someone who trusts their own mind." },
-      { type: "text", content: "That's what I'm trying to build." },
-      { type: "heading", content: "What I Actually Want For My Kids" },
-      { type: "text", content: "When I stopped reacting to the screen time problem and started thinking about what I actually wanted, the answer was surprisingly clear." },
-      { type: "text", content: "I want my kids to practice making decisions. Real ones, not multiple choice. The kind where you take a position, defend it, and live with the outcome. The world is going to demand agency from them and right now almost nothing in their digital lives asks them to exercise it. Everything is built around consuming and reacting rather than choosing and thinking." },
-      { type: "text", content: "I want them to stay curious. Not in the vague inspirational poster sense. In the practical sense of following a question further than the first answer, of noticing connections between things they're learning in different subjects, of developing the habit of going deeper instead of scrolling past." },
-      { type: "text", content: "I want them to build a healthy relationship with AI before the rest of the world decides what that relationship should look like. They're going to work alongside these tools for their entire lives. The habits they form now — whether they use AI as a crutch that does their thinking or as a partner that sharpens it — will shape how capable they are in a world that's going to change faster than any generation before them has experienced." },
-      { type: "text", content: "And I want them to have these things inside a product where every single design decision is made for their growth. Not for engagement. Not for retention. Not for a quarterly earnings call. For them." },
-      { type: "text", content: "No company is going to build that. So I am." },
-      { type: "heading", content: "What This Blog Is For" },
-      { type: "text", content: "I'm documenting the entire process here. Not as a polished case study but as a real build log — the decisions I'm making, why I'm making them, what's working, what isn't, what I'd do differently if I started over." },
-      { type: "text", content: "I'm a creative director working with AI to build something beyond my traditional skill set. That means the technical architecture won't always be elegant. It means I'm learning as I go and making mistakes in public. It also means I'm approaching this as a design problem first and an engineering problem second, which I think produces a different kind of product than what engineers building for kids typically create." },
-      { type: "text", content: "The project is open source because I think every parent should be able to build something like this for their own kids if they want to. The code will be available. The reasoning behind the code will be here. And if you're a developer who can make it better, I want your help." },
-      { type: "text", content: "Next post I'll get into the actual architecture — how the system is structured, what the agents look like under the hood, and the first round of design decisions that shaped everything that followed." },
-    ],
-  },
-];
+const SEED_POST = {
+  id: 1,
+  slug: "why-im-building-primer",
+  title: "Why I'm Building Primer",
+  date: "May 21, 2026",
+  read_time: "5 min",
+  tags: ["vision", "parenting"],
+  excerpt: "We spend a lot of energy as parents worrying about our kids and their devices. Meanwhile we're glued to our own. The kids have noticed.",
+  published: true,
+  body: [
+    { type: "text", content: "We spend a lot of energy as parents worrying about our kids and their devices. Screen time limits, app restrictions, lectures about attention spans. Meanwhile we're glued to our own. The kids have noticed." },
+    { type: "text", content: "There's something off about the whole framing. We treat devices like a threat to be managed when we know they aren't going away. We know our kids will build their lives around them. We know AI is about to make all of this more intense, not less. And our best collective strategy is restriction?" },
+    { type: "text", content: "I don't think the problem is that kids use devices. The problem is that nobody is building the right experience for them." },
+    { type: "text", content: "The apps my kids have access to are designed to retain them. Engagement metrics, notification loops, infinite scroll, streaks that punish you for missing a day. Even the \"educational\" ones are mostly built around the same model — keep the kid on the app as long as possible, make the numbers go up, report usage stats to parents so everyone feels good about screen time that's supposedly productive." },
+    { type: "text", content: "None of that is designed for my kids' benefit. It's designed for a business model. And I think most parents sense this even if they can't articulate it." },
+    { type: "text", content: "So rather than fighting a losing war against devices, I decided to build something worth putting on one." },
+    { type: "heading", content: "The Name" },
+    { type: "text", content: "Primer comes from Neal Stephenson's 1995 novel The Diamond Age. In the book there's a device called the Young Lady's Illustrated Primer — an interactive book powered by AI that adapts to its reader. It guides a young girl's education through story, challenge, and conversation. It doesn't do her thinking for her. It makes her a better thinker. It meets her where she is and grows with her." },
+    { type: "text", content: "Stephenson wrote this thirty years ago as science fiction. The technology to actually build it exists now. Not a perfect version — not yet — but something real, something functional, something that captures the core idea: a personalized AI thinking partner shaped around a specific kid, designed to educate and build curiosity and support them in becoming someone who trusts their own mind." },
+    { type: "text", content: "That's what I'm trying to build." },
+    { type: "heading", content: "What I Actually Want For My Kids" },
+    { type: "text", content: "When I stopped reacting to the screen time problem and started thinking about what I actually wanted, the answer was surprisingly clear." },
+    { type: "text", content: "I want my kids to practice making decisions. Real ones, not multiple choice. The kind where you take a position, defend it, and live with the outcome. The world is going to demand agency from them and right now almost nothing in their digital lives asks them to exercise it. Everything is built around consuming and reacting rather than choosing and thinking." },
+    { type: "text", content: "I want them to stay curious. Not in the vague inspirational poster sense. In the practical sense of following a question further than the first answer, of noticing connections between things they're learning in different subjects, of developing the habit of going deeper instead of scrolling past." },
+    { type: "text", content: "I want them to build a healthy relationship with AI before the rest of the world decides what that relationship should look like. They're going to work alongside these tools for their entire lives. The habits they form now — whether they use AI as a crutch that does their thinking or as a partner that sharpens it — will shape how capable they are in a world that's going to change faster than any generation before them has experienced." },
+    { type: "text", content: "And I want them to have these things inside a product where every single design decision is made for their growth. Not for engagement. Not for retention. Not for a quarterly earnings call. For them." },
+    { type: "text", content: "No company is going to build that. So I am." },
+    { type: "heading", content: "What This Blog Is For" },
+    { type: "text", content: "I'm documenting the entire process here. Not as a polished case study but as a real build log — the decisions I'm making, why I'm making them, what's working, what isn't, what I'd do differently if I started over." },
+    { type: "text", content: "I'm a creative director working with AI to build something beyond my traditional skill set. That means the technical architecture won't always be elegant. It means I'm learning as I go and making mistakes in public. It also means I'm approaching this as a design problem first and an engineering problem second, which I think produces a different kind of product than what engineers building for kids typically create." },
+    { type: "text", content: "The project is open source because I think every parent should be able to build something like this for their own kids if they want to. The code will be available. The reasoning behind the code will be here. And if you're a developer who can make it better, I want your help." },
+    { type: "text", content: "Next post I'll get into the actual architecture — how the system is structured, what the agents look like under the hood, and the first round of design decisions that shaped everything that followed." },
+  ],
+};
 
-// ─── Components ───────────────────────────────────────────────
+// ─── Text to Blocks Parser ──────────────────────────────────
+
+function textToBlocks(text) {
+  return text.split("\n\n").filter(Boolean).map(block => {
+    const trimmed = block.trim();
+    if (trimmed.startsWith("## ")) return { type: "heading", content: trimmed.slice(3) };
+    if (trimmed.startsWith("```")) return { type: "code", content: trimmed.replace(/^```\n?/, "").replace(/\n?```$/, "") };
+    return { type: "text", content: trimmed };
+  });
+}
+
+function blocksToText(blocks) {
+  return blocks.map(b => {
+    if (b.type === "heading") return `## ${b.content}`;
+    if (b.type === "code") return "```\n" + b.content + "\n```";
+    return b.content;
+  }).join("\n\n");
+}
+
+// ─── Data Layer ──────────────────────────────────────────────
+
+function usePosts() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { fetchPosts(); }, []);
+
+  async function fetchPosts(includeUnpublished = false) {
+    setLoading(true);
+    if (supabase) {
+      let query = supabase.from("posts").select("*").order("created_at", { ascending: false });
+      if (!includeUnpublished) query = query.eq("published", true);
+      const { data } = await query;
+      if (data) setPosts(data.map(p => ({ ...p, body: typeof p.body === "string" ? JSON.parse(p.body) : p.body })));
+    } else {
+      setPosts([SEED_POST]);
+    }
+    setLoading(false);
+  }
+
+  async function savePost(post) {
+    if (!supabase) return;
+    const payload = {
+      title: post.title,
+      slug: post.slug || post.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/-+$/,""),
+      excerpt: post.excerpt,
+      body: JSON.stringify(post.body),
+      tags: post.tags,
+      date: post.date || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      read_time: post.read_time || `${Math.max(1, Math.ceil(blocksToText(post.body).split(/\s+/).length / 200))} min`,
+      published: post.published ?? true,
+    };
+    if (post.id) {
+      await supabase.from("posts").update(payload).eq("id", post.id);
+    } else {
+      await supabase.from("posts").insert(payload);
+    }
+    await fetchPosts(true);
+  }
+
+  async function deletePost(id) {
+    if (!supabase) return;
+    await supabase.from("posts").delete().eq("id", id);
+    await fetchPosts(true);
+  }
+
+  return { posts, loading, fetchPosts, savePost, deletePost };
+}
+
+// ─── Auth ────────────────────────────────────────────────────
+
+function useAuth() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setUser(data?.session?.user ?? null));
+    const { data: listener } = supabase.auth.onAuthStateChange((_, session) => setUser(session?.user ?? null));
+    return () => listener?.subscription.unsubscribe();
+  }, []);
+
+  async function login(email, password) {
+    if (!supabase) return { error: "Supabase not configured" };
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message };
+  }
+
+  async function logout() {
+    if (supabase) await supabase.auth.signOut();
+    setUser(null);
+  }
+
+  return { user, login, logout };
+}
+
+// ─── Components ──────────────────────────────────────────────
 
 function Header({ onHome }) {
   return (
@@ -75,32 +172,14 @@ function Header({ onHome }) {
 function HeroBanner() {
   return (
     <div style={{ padding: "48px 24px 44px", borderBottom: `1px solid ${C.border}`, background: C.surfaceWarm }}>
-      <div style={{ maxWidth: 700, margin: "0 auto" }}>
-        <h2 style={{
-          fontFamily: "'Source Serif 4', Georgia, serif",
-          fontSize: 30,
-          fontWeight: 400,
-          color: C.text,
-          margin: "0 0 20px",
-          lineHeight: 1.25,
-          letterSpacing: "-0.5px",
-        }}>
+      <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 24px" }}>
+        <h2 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 30, fontWeight: 400, color: C.text, margin: "0 0 20px", lineHeight: 1.25, letterSpacing: "-0.5px" }}>
           Building <span style={gradientText}>Primer</span>
         </h2>
-        <div style={{
-          fontSize: 16, lineHeight: 1.8, color: C.textSecondary,
-          fontFamily: "'Source Serif 4', Georgia, serif", fontWeight: 400,
-          display: "flex", flexDirection: "column", gap: 16, maxWidth: 620,
-        }}>
-          <p style={{ margin: 0 }}>
-            I'm a creative director, not a software engineer. Primer is a personalized AI platform I'm building for my kids. It's a thinking partner designed to educate, build curiosity, and support them in becoming people who trust their own thinking.
-          </p>
-          <p style={{ margin: 0 }}>
-            Working with AI agents has given me something I didn't expect — the agency to build exactly what my kids need with no profit motive, no engagement metrics, no retention goals shaping the design. Every decision is made for one reason: their growth. That freedom changes everything about what the product becomes.
-          </p>
-          <p style={{ margin: 0 }}>
-            This blog is the build log. Design decisions, technical hurdles, mistakes, breakthroughs. The project is open source because the question it's trying to answer — <em>what should an AI relationship with a kid actually look like</em> — deserves more people working on it. Follow along, fork it, tell me what I'm doing wrong.
-          </p>
+        <div style={{ fontSize: 16, lineHeight: 1.8, color: C.textSecondary, fontFamily: "'Source Serif 4', Georgia, serif", fontWeight: 400, display: "flex", flexDirection: "column", gap: 16, maxWidth: 620 }}>
+          <p style={{ margin: 0 }}>I'm a creative director, not a software engineer. Primer is a personalized AI platform I'm building for my kids. It's a thinking partner designed to educate, build curiosity, and support them in becoming people who trust their own thinking.</p>
+          <p style={{ margin: 0 }}>Working with AI agents has given me something I didn't expect — the agency to build exactly what my kids need with no profit motive, no engagement metrics, no retention goals shaping the design. Every decision is made for one reason: their growth. That freedom changes everything about what the product becomes.</p>
+          <p style={{ margin: 0 }}>This blog is the build log. Design decisions, technical hurdles, mistakes, breakthroughs. The project is open source because the question it's trying to answer — <em style={{ fontStyle: "italic" }}>what should an AI relationship with a kid actually look like</em> — deserves more people working on it. Follow along, fork it, tell me what I'm doing wrong.</p>
           <div style={{ display: "flex", gap: 20, paddingTop: 6 }}>
             <a href={SITE.github} style={{ fontSize: 13, color: C.green, textDecoration: "none", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>GitHub →</a>
             <a href={SITE.substack} style={{ fontSize: 13, color: C.blue, textDecoration: "none", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>Substack →</a>
@@ -113,82 +192,183 @@ function HeroBanner() {
 
 function PostCard({ post, onClick, featured }) {
   return (
-    <article
-      onClick={onClick}
-      style={{ padding: featured ? "36px 0 32px" : "28px 0", borderBottom: `1px solid ${C.border}`, cursor: "pointer", transition: "opacity 0.2s" }}
-      onMouseEnter={e => e.currentTarget.style.opacity = "0.7"}
-      onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-    >
+    <article onClick={onClick} style={{ padding: featured ? "36px 0 32px" : "28px 0", borderBottom: `1px solid ${C.border}`, cursor: "pointer", transition: "opacity 0.2s" }}
+      onMouseEnter={e => e.currentTarget.style.opacity = "0.7"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
       {featured && <div style={{ fontSize: 11, fontWeight: 600, fontFamily: "'Outfit', sans-serif", letterSpacing: "0.4px", textTransform: "uppercase", marginBottom: 12, ...gradientText }}>Latest</div>}
-      <h2 style={{
-        fontFamily: "'Source Serif 4', Georgia, serif",
-        fontSize: featured ? 28 : 21,
-        fontWeight: 400,
-        color: C.text,
-        margin: "0 0 8px",
-        lineHeight: 1.3,
-        letterSpacing: "-0.3px",
-      }}>{post.title}</h2>
-      <p style={{
-        fontSize: 15, lineHeight: 1.7, color: C.textSecondary, margin: "0 0 12px",
-        fontFamily: "'Source Serif 4', Georgia, serif", fontWeight: 400,
-      }}>{post.excerpt}</p>
+      <h2 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: featured ? 28 : 21, fontWeight: 400, color: C.text, margin: "0 0 8px", lineHeight: 1.3, letterSpacing: "-0.3px" }}>{post.title}</h2>
+      <p style={{ fontSize: 15, lineHeight: 1.7, color: C.textSecondary, margin: "0 0 12px", fontFamily: "'Source Serif 4', Georgia, serif" }}>{post.excerpt}</p>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.date}</span>
         <span style={{ fontSize: 12, color: C.textMuted }}>·</span>
-        <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.readTime}</span>
-        {post.tags.map(t => (
-          <span key={t} style={{
-            padding: "2px 8px", borderRadius: 4,
-            background: `${C.green}08`, color: C.textMuted,
-            fontSize: 11, fontWeight: 500, fontFamily: "'Outfit', sans-serif",
-          }}>{t}</span>
-        ))}
+        <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.read_time}</span>
+        {(post.tags || []).map(t => <span key={t} style={{ padding: "2px 8px", borderRadius: 4, background: `${C.green}12`, color: C.textMuted, fontSize: 11, fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>{t}</span>)}
       </div>
     </article>
   );
 }
 
 function PostView({ post, onBack }) {
+  const body = Array.isArray(post.body) ? post.body : [];
   return (
     <div style={{ paddingTop: 12 }}>
-      <button onClick={onBack} style={{
-        fontSize: 13, color: C.textMuted, background: "none", border: "none",
-        cursor: "pointer", fontFamily: "'Outfit', sans-serif", padding: "0 0 28px", fontWeight: 500,
-      }}>← Back</button>
+      <button onClick={onBack} style={{ fontSize: 13, color: C.textMuted, background: "none", border: "none", cursor: "pointer", fontFamily: "'Outfit', sans-serif", padding: "0 0 28px", fontWeight: 500 }}>← Back</button>
       <article>
         <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14, flexWrap: "wrap" }}>
           <span style={{ fontSize: 13, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.date}</span>
           <span style={{ color: C.border }}>·</span>
-          <span style={{ fontSize: 13, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.readTime}</span>
-          {post.tags.map(t => (
-            <span key={t} style={{ padding: "2px 8px", borderRadius: 4, background: `${C.green}08`, color: C.textMuted, fontSize: 11, fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>{t}</span>
-          ))}
+          <span style={{ fontSize: 13, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.read_time}</span>
+          {(post.tags || []).map(t => <span key={t} style={{ padding: "2px 8px", borderRadius: 4, background: `${C.green}12`, color: C.textMuted, fontSize: 11, fontWeight: 500, fontFamily: "'Outfit', sans-serif" }}>{t}</span>)}
         </div>
-        <h1 style={{
-          fontFamily: "'Source Serif 4', Georgia, serif",
-          fontSize: 36, fontWeight: 400, color: C.text,
-          margin: "0 0 36px", lineHeight: 1.2, letterSpacing: "-0.5px",
-        }}>{post.title}</h1>
-
-        <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 17.5, lineHeight: 1.85, color: C.text }}>
-          {post.body.map((block, i) => {
+        <h1 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 36, fontWeight: 400, color: C.text, margin: "0 0 36px", lineHeight: 1.2, letterSpacing: "-0.5px" }}>{post.title}</h1>
+        <div style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 17.5, lineHeight: 1.85, color: C.textSecondary }}>
+          {body.map((block, i) => {
             if (block.type === "text") return <p key={i} style={{ margin: "0 0 24px" }}>{block.content}</p>;
             if (block.type === "heading") return <h2 key={i} style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 24, fontWeight: 400, color: C.text, margin: "40px 0 16px", letterSpacing: "-0.3px" }}>{block.content}</h2>;
-            if (block.type === "image") return (
-              <div key={i} style={{ margin: "32px 0", width: "100%", aspectRatio: block.aspect || "16/9", borderRadius: 14, background: `linear-gradient(145deg, ${C.green}10, ${C.blue}08)`, border: `1px solid ${C.green}15` }} />
-            );
-            if (block.type === "code") return (
-              <pre key={i} style={{
-                background: C.surfaceWarm, border: `1px solid ${C.border}`, borderRadius: 10,
-                padding: "18px 22px", fontFamily: "'JetBrains Mono', 'SF Mono', monospace",
-                fontSize: 13, lineHeight: 1.75, color: C.textSecondary, overflowX: "auto", margin: "28px 0",
-              }}>{block.content}</pre>
-            );
+            if (block.type === "code") return <pre key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 22px", fontFamily: "'JetBrains Mono', 'SF Mono', monospace", fontSize: 13, lineHeight: 1.75, color: C.textSecondary, overflowX: "auto", margin: "28px 0" }}>{block.content}</pre>;
             return null;
           })}
         </div>
       </article>
+    </div>
+  );
+}
+
+// ─── Admin ───────────────────────────────────────────────────
+
+function LoginForm({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    const result = await onLogin(email, password);
+    if (result.error) setError(result.error);
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ paddingTop: 60, maxWidth: 340, margin: "0 auto" }}>
+      <h2 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 24, fontWeight: 400, color: C.text, marginBottom: 24 }}>Admin</h2>
+      {!supabase && <p style={{ color: C.red, fontSize: 13, marginBottom: 16, fontFamily: "'Outfit', sans-serif" }}>Supabase not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.</p>}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email"
+          style={{ padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 14, fontFamily: "'Outfit', sans-serif", outline: "none" }} />
+        <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password"
+          style={{ padding: "10px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.text, fontSize: 14, fontFamily: "'Outfit', sans-serif", outline: "none" }} />
+        {error && <p style={{ color: C.red, fontSize: 13, fontFamily: "'Outfit', sans-serif" }}>{error}</p>}
+        <button onClick={handleSubmit} disabled={loading} style={{ padding: "10px 0", borderRadius: 8, border: "none", background: gradient, color: "#fff", fontSize: 14, fontFamily: "'Outfit', sans-serif", fontWeight: 600, cursor: "pointer", opacity: loading ? 0.6 : 1 }}>
+          {loading ? "Signing in..." : "Sign in"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
+  const [editing, setEditing] = useState(null);
+  const [title, setTitle] = useState("");
+  const [excerpt, setExcerpt] = useState("");
+  const [bodyText, setBodyText] = useState("");
+  const [tags, setTags] = useState("");
+  const [published, setPublished] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => { fetchPosts(true); }, []);
+
+  function startNew() {
+    setEditing("new"); setTitle(""); setExcerpt(""); setBodyText(""); setTags(""); setPublished(true);
+  }
+
+  function startEdit(post) {
+    setEditing(post.id);
+    setTitle(post.title);
+    setExcerpt(post.excerpt || "");
+    setBodyText(blocksToText(Array.isArray(post.body) ? post.body : []));
+    setTags((post.tags || []).join(", "));
+    setPublished(post.published ?? true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    await onSave({
+      id: editing === "new" ? null : editing,
+      title,
+      excerpt: excerpt || bodyText.split("\n\n")[0]?.slice(0, 160) || "",
+      body: textToBlocks(bodyText),
+      tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+      published,
+    });
+    setSaving(false);
+    setEditing(null);
+  }
+
+  if (editing !== null) {
+    return (
+      <div style={{ paddingTop: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+          <h2 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 22, fontWeight: 400, color: C.text }}>{editing === "new" ? "New Post" : "Editing"}</h2>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => setEditing(null)} style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.textSecondary, fontSize: 13, fontFamily: "'Outfit', sans-serif", fontWeight: 500, cursor: "pointer" }}>Cancel</button>
+            <button onClick={handleSave} disabled={saving} style={{ padding: "8px 22px", borderRadius: 8, border: "none", background: gradient, color: "#fff", fontSize: 13, fontFamily: "'Outfit', sans-serif", fontWeight: 600, cursor: "pointer", opacity: saving ? 0.6 : 1 }}>
+              {saving ? "Saving..." : published ? "Publish" : "Save Draft"}
+            </button>
+          </div>
+        </div>
+
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title"
+          style={{ width: "100%", fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 30, fontWeight: 400, color: C.text, border: "none", outline: "none", padding: "0 0 16px", borderBottom: `1px solid ${C.border}`, background: "transparent", letterSpacing: "-0.3px" }} />
+
+        <input value={excerpt} onChange={e => setExcerpt(e.target.value)} placeholder="Excerpt — the preview text shown on the blog list"
+          style={{ width: "100%", fontFamily: "'Outfit', sans-serif", fontSize: 14, color: C.textSecondary, border: "none", outline: "none", padding: "14px 0", borderBottom: `1px solid ${C.border}`, background: "transparent" }} />
+
+        <input value={tags} onChange={e => setTags(e.target.value)} placeholder="Tags — vision, design, building, lessons learned"
+          style={{ width: "100%", fontFamily: "'Outfit', sans-serif", fontSize: 13, color: C.textMuted, border: "none", outline: "none", padding: "14px 0", borderBottom: `1px solid ${C.border}`, background: "transparent" }} />
+
+        <div style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>
+            Use <code style={{ background: C.surface, padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>## Heading</code> for section headers · blank lines between paragraphs · <code style={{ background: C.surface, padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>```code```</code> for code blocks
+          </span>
+          <button onClick={() => setPublished(!published)} style={{ fontSize: 12, color: published ? C.green : C.textMuted, background: `${published ? C.green : C.textMuted}12`, border: `1px solid ${published ? C.green : C.textMuted}30`, borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>
+            {published ? "Published" : "Draft"}
+          </button>
+        </div>
+
+        <textarea value={bodyText} onChange={e => setBodyText(e.target.value)} placeholder="Start writing..."
+          style={{ width: "100%", minHeight: 400, fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 17.5, lineHeight: 1.85, color: C.text, border: "none", outline: "none", padding: "20px 0", background: "transparent", resize: "vertical" }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingTop: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <h2 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 22, fontWeight: 400, color: C.text }}>Posts</h2>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={onLogout} style={{ padding: "8px 14px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surface, color: C.textMuted, fontSize: 12, fontFamily: "'Outfit', sans-serif", fontWeight: 500, cursor: "pointer" }}>Log out</button>
+          <button onClick={startNew} style={{ padding: "8px 22px", borderRadius: 8, border: "none", background: gradient, color: "#fff", fontSize: 13, fontFamily: "'Outfit', sans-serif", fontWeight: 600, cursor: "pointer" }}>+ New Post</button>
+        </div>
+      </div>
+
+      {posts.map(post => (
+        <div key={post.id} style={{ padding: "16px 20px", borderRadius: 12, border: `1px solid ${C.border}`, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center", background: C.surface, cursor: "pointer", transition: "border-color 0.2s" }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = `${C.green}40`} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+          <div onClick={() => startEdit(post)} style={{ flex: 1 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 16, color: C.text }}>{post.title}</span>
+              {!post.published && <span style={{ fontSize: 10, color: C.textMuted, background: `${C.textMuted}15`, padding: "1px 6px", borderRadius: 4, fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>DRAFT</span>}
+            </div>
+            <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.date}</span>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <span onClick={() => startEdit(post)} style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif", fontWeight: 500, cursor: "pointer" }}>Edit</span>
+            <span onClick={() => { if (confirm("Delete this post?")) onDelete(post.id); }} style={{ fontSize: 12, color: C.red, fontFamily: "'Outfit', sans-serif", fontWeight: 500, cursor: "pointer" }}>Delete</span>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -200,25 +380,22 @@ function Footer({ onAdmin, isAdmin }) {
       <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
         <a href={SITE.github} style={{ fontSize: 12, color: C.textMuted, textDecoration: "none", fontFamily: "'Outfit', sans-serif" }}>GitHub</a>
         <a href={SITE.substack} style={{ fontSize: 12, color: C.textMuted, textDecoration: "none", fontFamily: "'Outfit', sans-serif" }}>Substack</a>
-        <button onClick={onAdmin} style={{
-          fontSize: 11, background: isAdmin ? `${C.green}10` : "transparent",
-          border: `1px solid ${isAdmin ? `${C.green}25` : "transparent"}`,
-          color: isAdmin ? C.green : C.textMuted,
-          borderRadius: 6, padding: "4px 10px", cursor: "pointer",
-          fontFamily: "'Outfit', sans-serif", fontWeight: 600,
-        }}>{isAdmin ? "← Blog" : "Admin"}</button>
+        <button onClick={onAdmin} style={{ fontSize: 11, background: isAdmin ? `${C.green}15` : "transparent", border: `1px solid ${isAdmin ? `${C.green}30` : "transparent"}`, color: isAdmin ? C.green : C.textMuted, borderRadius: 6, padding: "4px 10px", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>{isAdmin ? "← Blog" : "Admin"}</button>
       </div>
     </footer>
   );
 }
 
-// ─── App ──────────────────────────────────────────────────────
+// ─── App ─────────────────────────────────────────────────────
 
 export default function App() {
   const [view, setView] = useState("list");
   const [selectedPost, setSelectedPost] = useState(null);
+  const { posts, loading, fetchPosts, savePost, deletePost } = usePosts();
+  const { user, login, logout } = useAuth();
   const isAdmin = view === "admin";
-  const goHome = () => { setView("list"); setSelectedPost(null); };
+  const goHome = () => { setView("list"); setSelectedPost(null); fetchPosts(); };
+  const publishedPosts = posts.filter(p => p.published);
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Outfit', sans-serif" }}>
@@ -228,12 +405,14 @@ export default function App() {
       <main style={{ maxWidth: 700, margin: "0 auto", padding: "0 24px" }}>
         {view === "list" && (
           <div>
-            {POSTS.map((p, i) => (
-              <PostCard key={p.id} post={p} onClick={() => { setSelectedPost(p); setView("post"); }} featured={i === 0} />
-            ))}
+            {loading ? <p style={{ padding: "40px 0", color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>Loading...</p> :
+              publishedPosts.map((p, i) => <PostCard key={p.id} post={p} onClick={() => { setSelectedPost(p); setView("post"); }} featured={i === 0} />)
+            }
           </div>
         )}
         {view === "post" && selectedPost && <PostView post={selectedPost} onBack={goHome} />}
+        {view === "admin" && !user && <LoginForm onLogin={login} />}
+        {view === "admin" && user && <AdminPanel posts={posts} onSave={savePost} onDelete={deletePost} onLogout={() => { logout(); setView("list"); }} fetchPosts={fetchPosts} />}
         <Footer onAdmin={() => setView(isAdmin ? "list" : "admin")} isAdmin={isAdmin} />
       </main>
     </div>
