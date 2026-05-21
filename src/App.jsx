@@ -218,9 +218,9 @@ function Comments({ slug }) {
     const script = document.createElement("script");
     script.src = "https://giscus.app/client.js";
     script.setAttribute("data-repo", "bubimude-vibes/building-primer");
-    script.setAttribute("data-repo-id", ""); // Fill after enabling Discussions
+    script.setAttribute("data-repo-id", "R_kgDOSkJB2Q");
     script.setAttribute("data-category", "Announcements");
-    script.setAttribute("data-category-id", ""); // Fill after enabling Discussions
+    script.setAttribute("data-category-id", "DIC_kwDOSkJB2c4C9jqh");
     script.setAttribute("data-mapping", "specific");
     script.setAttribute("data-term", slug || "");
     script.setAttribute("data-strict", "0");
@@ -333,13 +333,19 @@ function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
     const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { data, error } = await supabase.storage.from("images").upload(name, file, { contentType: file.type });
     if (error) {
-      alert("Upload failed: " + error.message);
+      alert("Upload failed: " + error.message + "\n\nMake sure you created the 'images' storage bucket in Supabase (see SETUP.md step 3).");
       setUploading(false);
       return;
     }
     const { data: urlData } = supabase.storage.from("images").getPublicUrl(name);
-    const imageMarkdown = `\n\n![${file.name.replace(/\.[^.]+$/, "")}](${urlData.publicUrl})\n\n`;
-    setBodyText(prev => prev + imageMarkdown);
+    const imageMarkdown = `![${file.name.replace(/\.[^.]+$/, "")}](${urlData.publicUrl})`;
+    const textarea = document.getElementById("post-body-editor");
+    const pos = textarea?.selectionStart ?? bodyText.length;
+    const before = bodyText.slice(0, pos);
+    const after = bodyText.slice(pos);
+    const needsNewlineBefore = before.length > 0 && !before.endsWith("\n\n") ? "\n\n" : "";
+    const needsNewlineAfter = after.length > 0 && !after.startsWith("\n\n") ? "\n\n" : "";
+    setBodyText(before + needsNewlineBefore + imageMarkdown + needsNewlineAfter + after);
     setUploading(false);
     e.target.value = "";
   }
@@ -395,7 +401,7 @@ function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
           </button>
         </div>
 
-        <textarea value={bodyText} onChange={e => setBodyText(e.target.value)} placeholder="Start writing..."
+        <textarea id="post-body-editor" value={bodyText} onChange={e => setBodyText(e.target.value)} placeholder="Start writing..."
           style={{ width: "100%", minHeight: 400, fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 17.5, lineHeight: 1.85, color: C.text, border: "none", outline: "none", padding: "20px 0", background: "transparent", resize: "vertical" }} />
       </div>
     );
