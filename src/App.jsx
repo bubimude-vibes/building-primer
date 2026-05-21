@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 
 const SITE = {
   github: "https://github.com/bubimude-vibes/primer",
-  substack: "https://yoursubstack.substack.com",
+  substack: "https://substack.com/@benjithiem",
 };
 
 const C = {
