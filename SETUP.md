@@ -40,7 +40,23 @@ create policy "Authenticated users can do everything"
   using (auth.role() = 'authenticated');
 ```
 
-### 3. Seed the first post (optional)
+### 3. Create the image storage bucket
+
+In your Supabase dashboard, go to **Storage** in the left sidebar, click **New Bucket**. Name it `images`, toggle **Public bucket** on, click **Create bucket**.
+
+Then go to **SQL Editor** and run this to allow authenticated uploads:
+
+```sql
+create policy "Authenticated users can upload images"
+  on storage.objects for insert
+  with check (bucket_id = 'images' and auth.role() = 'authenticated');
+
+create policy "Public can view images"
+  on storage.objects for select
+  using (bucket_id = 'images');
+```
+
+### 4. Seed the first post (optional)
 
 If you want the first post in the database instead of just hardcoded:
 
@@ -57,11 +73,11 @@ insert into posts (title, slug, excerpt, body, tags, date, read_time, published)
 );
 ```
 
-### 4. Create your admin account
+### 5. Create your admin account
 
 In Supabase dashboard, go to **Authentication** → **Users** → **Add User**. Enter your email and a password. This is what you'll use to log into the admin panel.
 
-### 5. Add environment variables to Vercel
+### 6. Add environment variables to Vercel
 
 In your Supabase dashboard, go to **Settings** → **API**. You need two values:
 - **Project URL** (looks like `https://xxxxx.supabase.co`)
@@ -76,9 +92,9 @@ In Vercel, go to your project → **Settings** → **Environment Variables**. Ad
 
 Click **Save**. Then go to **Deployments** and click **Redeploy** on the latest deployment.
 
-### 6. Test the admin
+### 7. Test the admin
 
-Go to `projectprimer.blog`, scroll to the footer, click **Admin**. Log in with the email/password you created in step 4. You should see your posts and be able to create new ones.
+Go to `projectprimer.blog`, scroll to the footer, click **Admin**. Log in with the email/password you created in step 5. You should see your posts and be able to create new ones.
 
 ## Writing Posts
 
@@ -86,10 +102,12 @@ In the admin editor:
 - **Blank lines** between text create separate paragraphs
 - **`## Heading`** at the start of a line creates a section header
 - **` ```code``` `** creates a code block
+- **`![caption](url)`** embeds an image (auto-inserted when you click Add Image)
 - **Tags** are comma-separated
 - **Excerpt** is the preview text shown on the blog list
 - Click **Published/Draft** to toggle visibility
 - Posts auto-calculate read time from word count
+- Click **🖼 Add Image** to upload and insert an image at the end of your post
 
 ## Updating the site
 

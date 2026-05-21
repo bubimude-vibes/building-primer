@@ -67,6 +67,8 @@ function textToBlocks(text) {
     const trimmed = block.trim();
     if (trimmed.startsWith("## ")) return { type: "heading", content: trimmed.slice(3) };
     if (trimmed.startsWith("```")) return { type: "code", content: trimmed.replace(/^```\n?/, "").replace(/\n?```$/, "") };
+    const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imgMatch) return { type: "image", content: imgMatch[1], url: imgMatch[2] };
     return { type: "text", content: trimmed };
   });
 }
@@ -75,6 +77,7 @@ function blocksToText(blocks) {
   return blocks.map(b => {
     if (b.type === "heading") return `## ${b.content}`;
     if (b.type === "code") return "```\n" + b.content + "\n```";
+    if (b.type === "image") return `![${b.content || ""}](${b.url})`;
     return b.content;
   }).join("\n\n");
 }
@@ -177,7 +180,7 @@ function HeroBanner() {
           Building <span style={gradientText}>Primer</span>
         </h2>
         <div style={{ fontSize: 16, lineHeight: 1.8, color: C.textSecondary, fontFamily: "'Source Serif 4', Georgia, serif", fontWeight: 400, display: "flex", flexDirection: "column", gap: 16, maxWidth: 620 }}>
-          <p style={{ margin: 0 }}>I'm a creative director, not a software engineer. Primer is a personalized AI platform I'm building for my kids. It's a thinking partner designed to educate, build curiosity, and support them in becoming people who trust their own thinking.</p>
+          <p style={{ margin: 0 }}>Primer is a personalized AI platform I'm building for my kids. It's a thinking partner designed to educate, build curiosity, and support them in becoming people who trust their own thinking.</p>
           <p style={{ margin: 0 }}>Working with AI agents has given me something I didn't expect — the agency to build exactly what my kids need with no profit motive, no engagement metrics, no retention goals shaping the design. Every decision is made for one reason: their growth. That freedom changes everything about what the product becomes.</p>
           <p style={{ margin: 0 }}>This blog is the build log. Design decisions, technical hurdles, mistakes, breakthroughs. The project is open source because the question it's trying to answer — <em style={{ fontStyle: "italic" }}>what should an AI relationship with a kid actually look like</em> — deserves more people working on it. Follow along, fork it, tell me what I'm doing wrong.</p>
           <div style={{ display: "flex", gap: 20, paddingTop: 6 }}>
@@ -207,6 +210,33 @@ function PostCard({ post, onClick, featured }) {
   );
 }
 
+function Comments({ slug }) {
+  useEffect(() => {
+    const container = document.getElementById("giscus-container");
+    if (!container) return;
+    container.innerHTML = "";
+    const script = document.createElement("script");
+    script.src = "https://giscus.app/client.js";
+    script.setAttribute("data-repo", "bubimude-vibes/building-primer");
+    script.setAttribute("data-repo-id", ""); // Fill after enabling Discussions
+    script.setAttribute("data-category", "Announcements");
+    script.setAttribute("data-category-id", ""); // Fill after enabling Discussions
+    script.setAttribute("data-mapping", "specific");
+    script.setAttribute("data-term", slug || "");
+    script.setAttribute("data-strict", "0");
+    script.setAttribute("data-reactions-enabled", "1");
+    script.setAttribute("data-emit-metadata", "0");
+    script.setAttribute("data-input-position", "top");
+    script.setAttribute("data-theme", "noborder_dark");
+    script.setAttribute("data-lang", "en");
+    script.crossOrigin = "anonymous";
+    script.async = true;
+    container.appendChild(script);
+  }, [slug]);
+
+  return <div id="giscus-container" style={{ marginTop: 48, paddingTop: 32, borderTop: `1px solid ${C.border}` }} />;
+}
+
 function PostView({ post, onBack }) {
   const body = Array.isArray(post.body) ? post.body : [];
   return (
@@ -224,10 +254,12 @@ function PostView({ post, onBack }) {
           {body.map((block, i) => {
             if (block.type === "text") return <p key={i} style={{ margin: "0 0 24px" }}>{block.content}</p>;
             if (block.type === "heading") return <h2 key={i} style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 24, fontWeight: 400, color: C.text, margin: "40px 0 16px", letterSpacing: "-0.3px" }}>{block.content}</h2>;
+            if (block.type === "image") return <figure key={i} style={{ margin: "32px 0" }}><img src={block.url} alt={block.content || ""} style={{ width: "100%", borderRadius: 10, border: `1px solid ${C.border}` }} />{block.content && <figcaption style={{ fontSize: 13, color: C.textMuted, marginTop: 8, fontFamily: "'Outfit', sans-serif", fontStyle: "italic" }}>{block.content}</figcaption>}</figure>;
             if (block.type === "code") return <pre key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 22px", fontFamily: "'JetBrains Mono', 'SF Mono', monospace", fontSize: 13, lineHeight: 1.75, color: C.textSecondary, overflowX: "auto", margin: "28px 0" }}>{block.content}</pre>;
             return null;
           })}
         </div>
+        <Comments slug={post.slug} />
       </article>
     </div>
   );
@@ -276,6 +308,7 @@ function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
   const [tags, setTags] = useState("");
   const [published, setPublished] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => { fetchPosts(true); }, []);
 
@@ -290,6 +323,25 @@ function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
     setBodyText(blocksToText(Array.isArray(post.body) ? post.body : []));
     setTags((post.tags || []).join(", "));
     setPublished(post.published ?? true);
+  }
+
+  async function handleImageUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file || !supabase) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const name = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { data, error } = await supabase.storage.from("images").upload(name, file, { contentType: file.type });
+    if (error) {
+      alert("Upload failed: " + error.message);
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(name);
+    const imageMarkdown = `\n\n![${file.name.replace(/\.[^.]+$/, "")}](${urlData.publicUrl})\n\n`;
+    setBodyText(prev => prev + imageMarkdown);
+    setUploading(false);
+    e.target.value = "";
   }
 
   async function handleSave() {
@@ -328,10 +380,16 @@ function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
         <input value={tags} onChange={e => setTags(e.target.value)} placeholder="Tags — vision, design, building, lessons learned"
           style={{ width: "100%", fontFamily: "'Outfit', sans-serif", fontSize: 13, color: C.textMuted, border: "none", outline: "none", padding: "14px 0", borderBottom: `1px solid ${C.border}`, background: "transparent" }} />
 
-        <div style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>
-            Use <code style={{ background: C.surface, padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>## Heading</code> for section headers · blank lines between paragraphs · <code style={{ background: C.surface, padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>```code```</code> for code blocks
-          </span>
+        <div style={{ padding: "12px 0", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>
+              <code style={{ background: C.surface, padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>## Heading</code> · blank lines between paragraphs · <code style={{ background: C.surface, padding: "1px 5px", borderRadius: 3, fontSize: 11 }}>```code```</code>
+            </span>
+            <input type="file" id="img-upload" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
+            <button onClick={() => document.getElementById("img-upload").click()} disabled={uploading} style={{ fontSize: 12, color: uploading ? C.textMuted : C.blue, background: `${C.blue}12`, border: `1px solid ${C.blue}25`, borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontWeight: 600, opacity: uploading ? 0.5 : 1 }}>
+              {uploading ? "Uploading..." : "🖼 Add Image"}
+            </button>
+          </div>
           <button onClick={() => setPublished(!published)} style={{ fontSize: 12, color: published ? C.green : C.textMuted, background: `${published ? C.green : C.textMuted}12`, border: `1px solid ${published ? C.green : C.textMuted}30`, borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>
             {published ? "Published" : "Draft"}
           </button>
