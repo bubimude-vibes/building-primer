@@ -199,7 +199,7 @@ function PostCard({ post, onClick, featured }) {
       onMouseEnter={e => e.currentTarget.style.opacity = "0.7"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
       {featured && <div style={{ fontSize: 11, fontWeight: 600, fontFamily: "'Outfit', sans-serif", letterSpacing: "0.4px", textTransform: "uppercase", marginBottom: 12, ...gradientText }}>Latest</div>}
       <h2 style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: featured ? 28 : 21, fontWeight: 400, color: C.text, margin: "0 0 8px", lineHeight: 1.3, letterSpacing: "-0.3px" }}>{post.title}</h2>
-      <p style={{ fontSize: 15, lineHeight: 1.7, color: C.textSecondary, margin: "0 0 12px", fontFamily: "'Source Serif 4', Georgia, serif" }}>{post.excerpt}</p>
+      <p style={{ fontSize: 15, lineHeight: 1.7, color: C.textSecondary, margin: "0 0 12px", fontFamily: "'Source Serif 4', Georgia, serif" }}>{(post.excerpt || "").replace(/!\[[^\]]*\]\([^)]+\)/g, "").trim()}</p>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <span style={{ fontSize: 12, color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>{post.date}</span>
         <span style={{ fontSize: 12, color: C.textMuted }}>·</span>
