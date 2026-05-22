@@ -5,6 +5,35 @@ body {
   color: #E4E4E8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --svg-bg: #18181B;
+  --svg-text: #E4E4E8;
+  --svg-text-secondary: #9898A0;
+  --svg-text-muted: #5C5C66;
+  --svg-border: #2A2A30;
+  --svg-surface: #222228;
+  --svg-blue: #185FA5;
+  --svg-blue-fill: #042C53;
+  --svg-blue-text: #B5D4F4;
+  --svg-blue-sub: #85B7EB;
+  --svg-green: #3B6D11;
+  --svg-green-fill: #173404;
+  --svg-green-text: #C0DD97;
+  --svg-green-sub: #97C459;
+  --svg-amber: #854F0B;
+  --svg-amber-fill: #412402;
+  --svg-amber-text: #FAC775;
+  --svg-amber-sub: #EF9F27;
+  --svg-purple: #534AB7;
+  --svg-purple-fill: #26215C;
+  --svg-purple-text: #CECBF6;
+  --svg-purple-sub: #AFA9EC;
+  --svg-coral: #993C1D;
+  --svg-coral-fill: #4A1B0C;
+  --svg-coral-text: #F5C4B3;
+  --svg-coral-sub: #F0997B;
+  --svg-red: #E24B4A;
+  --svg-gray-fill: #222228;
+  --svg-gray-stroke: #444441;
 }
 ::selection { background: rgba(46,189,142,0.2); color: #E4E4E8; }
 ::-webkit-scrollbar { width: 3px; }

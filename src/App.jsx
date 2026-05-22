@@ -63,20 +63,48 @@ const SEED_POST = {
 // ─── Text to Blocks Parser ──────────────────────────────────
 
 function textToBlocks(text) {
-  return text.split("\n\n").filter(Boolean).map(block => {
-    const trimmed = block.trim();
-    if (trimmed.startsWith("## ")) return { type: "heading", content: trimmed.slice(3) };
-    if (trimmed.startsWith("```")) return { type: "code", content: trimmed.replace(/^```\n?/, "").replace(/\n?```$/, "") };
-    const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-    if (imgMatch) return { type: "image", content: imgMatch[1], url: imgMatch[2] };
-    return { type: "text", content: trimmed };
-  });
+  const blocks = [];
+  const fenceRegex = /```(\w*)\n([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = fenceRegex.exec(text)) !== null) {
+    const before = text.slice(lastIndex, match.index).trim();
+    if (before) {
+      before.split("\n\n").filter(Boolean).forEach(p => {
+        const t = p.trim();
+        if (t.startsWith("## ")) blocks.push({ type: "heading", content: t.slice(3) });
+        else {
+          const imgMatch = t.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+          if (imgMatch) blocks.push({ type: "image", content: imgMatch[1], url: imgMatch[2] });
+          else blocks.push({ type: "text", content: t });
+        }
+      });
+    }
+    const lang = match[1].toLowerCase();
+    if (lang === "svg") blocks.push({ type: "svg", content: match[2].trim() });
+    else blocks.push({ type: "code", content: match[2].trim() });
+    lastIndex = match.index + match[0].length;
+  }
+  const remaining = text.slice(lastIndex).trim();
+  if (remaining) {
+    remaining.split("\n\n").filter(Boolean).forEach(p => {
+      const t = p.trim();
+      if (t.startsWith("## ")) blocks.push({ type: "heading", content: t.slice(3) });
+      else {
+        const imgMatch = t.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+        if (imgMatch) blocks.push({ type: "image", content: imgMatch[1], url: imgMatch[2] });
+        else blocks.push({ type: "text", content: t });
+      }
+    });
+  }
+  return blocks;
 }
 
 function blocksToText(blocks) {
   return blocks.map(b => {
     if (b.type === "heading") return `## ${b.content}`;
     if (b.type === "code") return "```\n" + b.content + "\n```";
+    if (b.type === "svg") return "```svg\n" + b.content + "\n```";
     if (b.type === "image") return `![${b.content || ""}](${b.url})`;
     return b.content;
   }).join("\n\n");
@@ -255,6 +283,7 @@ function PostView({ post, onBack }) {
             if (block.type === "text") return <p key={i} style={{ margin: "0 0 24px" }}>{block.content}</p>;
             if (block.type === "heading") return <h2 key={i} style={{ fontFamily: "'Source Serif 4', Georgia, serif", fontSize: 24, fontWeight: 400, color: C.text, margin: "40px 0 16px", letterSpacing: "-0.3px" }}>{block.content}</h2>;
             if (block.type === "image") return <figure key={i} style={{ margin: "32px 0" }}><img src={block.url} alt={block.content || ""} style={{ width: "100%", borderRadius: 10, border: `1px solid ${C.border}` }} />{block.content && <figcaption style={{ fontSize: 13, color: C.textMuted, marginTop: 8, fontFamily: "'Outfit', sans-serif", fontStyle: "italic" }}>{block.content}</figcaption>}</figure>;
+            if (block.type === "svg") return <div key={i} style={{ margin: "32px 0", width: "100%", overflow: "hidden", borderRadius: 10 }} dangerouslySetInnerHTML={{ __html: block.content }} />;
             if (block.type === "code") return <pre key={i} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 10, padding: "18px 22px", fontFamily: "'JetBrains Mono', 'SF Mono', monospace", fontSize: 13, lineHeight: 1.75, color: C.textSecondary, overflowX: "auto", margin: "28px 0" }}>{block.content}</pre>;
             return null;
           })}
@@ -350,6 +379,29 @@ function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
     e.target.value = "";
   }
 
+  function handleSvgUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const svgContent = ev.target.result.trim();
+      if (!svgContent.includes("<svg")) {
+        alert("This doesn't look like an SVG file.");
+        return;
+      }
+      const svgBlock = "```svg\n" + svgContent + "\n```";
+      const textarea = document.getElementById("post-body-editor");
+      const pos = textarea?.selectionStart ?? bodyText.length;
+      const before = bodyText.slice(0, pos);
+      const after = bodyText.slice(pos);
+      const needsNewlineBefore = before.length > 0 && !before.endsWith("\n\n") ? "\n\n" : "";
+      const needsNewlineAfter = after.length > 0 && !after.startsWith("\n\n") ? "\n\n" : "";
+      setBodyText(before + needsNewlineBefore + svgBlock + needsNewlineAfter + after);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
   async function handleSave() {
     setSaving(true);
     await onSave({
@@ -393,7 +445,11 @@ function AdminPanel({ posts, onSave, onDelete, onLogout, fetchPosts }) {
             </span>
             <input type="file" id="img-upload" accept="image/*" onChange={handleImageUpload} style={{ display: "none" }} />
             <button onClick={() => document.getElementById("img-upload").click()} disabled={uploading} style={{ fontSize: 12, color: uploading ? C.textMuted : C.blue, background: `${C.blue}12`, border: `1px solid ${C.blue}25`, borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontWeight: 600, opacity: uploading ? 0.5 : 1 }}>
-              {uploading ? "Uploading..." : "🖼 Add Image"}
+              {uploading ? "Uploading..." : "Add image"}
+            </button>
+            <input type="file" id="svg-upload" accept=".svg" onChange={handleSvgUpload} style={{ display: "none" }} />
+            <button onClick={() => document.getElementById("svg-upload").click()} style={{ fontSize: 12, color: C.green, background: `${C.green}12`, border: `1px solid ${C.green}25`, borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>
+              Add SVG
             </button>
           </div>
           <button onClick={() => setPublished(!published)} style={{ fontSize: 12, color: published ? C.green : C.textMuted, background: `${published ? C.green : C.textMuted}12`, border: `1px solid ${published ? C.green : C.textMuted}30`, borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontWeight: 600 }}>
