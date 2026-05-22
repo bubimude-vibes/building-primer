@@ -514,8 +514,17 @@ export default function App() {
   const { posts, loading, fetchPosts, savePost, deletePost } = usePosts();
   const { user, login, logout } = useAuth();
   const isAdmin = view === "admin";
-  const goHome = () => { setView("list"); setSelectedPost(null); fetchPosts(); };
   const publishedPosts = posts.filter(p => p.published);
+
+  const goHome = () => { window.history.pushState({ view: "list" }, ""); setView("list"); setSelectedPost(null); fetchPosts(); };
+  const openPost = (p) => { window.history.pushState({ view: "post", slug: p.slug }, ""); setSelectedPost(p); setView("post"); };
+  const openAdmin = () => { const next = isAdmin ? "list" : "admin"; window.history.pushState({ view: next }, ""); setView(next); };
+
+  useEffect(() => {
+    const onPop = () => { setView("list"); setSelectedPost(null); };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Outfit', sans-serif" }}>
@@ -526,14 +535,14 @@ export default function App() {
         {view === "list" && (
           <div>
             {loading ? <p style={{ padding: "40px 0", color: C.textMuted, fontFamily: "'Outfit', sans-serif" }}>Loading...</p> :
-              publishedPosts.map((p, i) => <PostCard key={p.id} post={p} onClick={() => { setSelectedPost(p); setView("post"); }} featured={i === 0} />)
+              publishedPosts.map((p, i) => <PostCard key={p.id} post={p} onClick={() => openPost(p)} featured={i === 0} />)
             }
           </div>
         )}
         {view === "post" && selectedPost && <PostView post={selectedPost} onBack={goHome} />}
         {view === "admin" && !user && <LoginForm onLogin={login} />}
-        {view === "admin" && user && <AdminPanel posts={posts} onSave={savePost} onDelete={deletePost} onLogout={() => { logout(); setView("list"); }} fetchPosts={fetchPosts} />}
-        <Footer onAdmin={() => setView(isAdmin ? "list" : "admin")} isAdmin={isAdmin} />
+        {view === "admin" && user && <AdminPanel posts={posts} onSave={savePost} onDelete={deletePost} onLogout={() => { logout(); goHome(); }} fetchPosts={fetchPosts} />}
+        <Footer onAdmin={openAdmin} isAdmin={isAdmin} />
       </main>
     </div>
   );
